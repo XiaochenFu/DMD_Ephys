@@ -2,10 +2,11 @@
 
 
 % This script is designed to present light dot to get the receptive field
-% of the recording unit. Each tiem, a light spot near the ROI will be
-% uploaded, ordered or randomly.
+% of the recording unit. We first define the center of the ROI. Then,
+% analog input will be analysed continouly. If there's an abruct current
+% increase, one pattern will be uploaded and presented. 
 
-% The light presentation will be triggered by an external trigger from
+% The light presentation will can be triggered by an external trigger from
 % labview vi.
 
 % Enter the center of the 'receptive field' we want to explore
@@ -27,6 +28,9 @@ ParentFolder = CurrentFolder(1:idcs(end)-1);
 load([ParentFolder '/F0_Setup/data/' DataFileName])
 latency = 0.5;
 radius = 50;
+side_length = 50;
+
+
 
 % creat a array of coordiantes of the light spots. If random, shuffle the
 % dots. Otherwise, present one by one.
@@ -78,12 +82,19 @@ trigConfig.Slope = 20;
 bufferTimeSpan = double(s.NotifyWhenDataAvailableExceeds)/s.Rate*3;
 bufferSize =  round(bufferTimeSpan * s.Rate);
 spotConfig.idx = idx;
-spotConfig.radius = radius;
 spotConfig.latency = latency;
 spotConfig.spot_position_X2 = spot_position_X2;
 spotConfig.spot_position_Y2 = spot_position_Y2;
 spotConfig.md1 = md1;
 spotConfig.md2 = md2;
+spotConfig.RoundOrSquare = RoundOrSquare;
+switch RoundOrSquare
+    case 'Round'
+        spotConfig.radius = radius;
+    case 'Square'
+        spotConfig.side_length = side_length;
+end
+
 tic
 while  toc<20 
 dataListener = addlistener(s, 'DataAvailable', @(src,event) UploadPatternWhenTriggered(src, event, bufferSize, trigConfig, spotConfig, d));
@@ -159,14 +170,22 @@ if ~trigActive
     % State: "Looking for trigger event"
     [trigActive, ~] = trigDetect(prevData, latestData, trigConfig);
 else
-    
+    RoundOrSquare = spotConfig.RoundOrSquare;
     spot_position_X2 = spotConfig.spot_position_X2;
     spot_position_Y2 = spotConfig.spot_position_Y2;
-    radius = spotConfig.radius;
     latency = spotConfig.latency;
     x1 = predict(md1,[spot_position_X2(ii) spot_position_Y2(ii)]);
     y1 = predict(md2,[spot_position_X2(ii) spot_position_Y2(ii)]);
-    blink_a_defined_dot(d, latency, x1, y1, radius)
+    switch RoundOrSquare
+        case 'Round'
+            radius = spotConfig.radius;
+            blink_a_defined_dot_round(d, latency, x1, y1, radius);
+        case 'Square'
+            side_length = spotConfig.side_length;
+            blink_a_defined_dot_square(d, latency, x1, y1, side_length);
+    end
+    
+    
     ii = ii+1;
     
     % Reset trigger flag, to allow for a new triggered data capture
@@ -224,13 +243,35 @@ if trigDetected
 end
 end
 
-function blink_a_defined_dot(d, latency, x, y, radius)
+function blink_a_defined_dot_round(d, latency, x, y, radius)
 % latency in second
 % stop the current pattern and upload the dot. The dot will be blinking
 % every ~ second, where ~ is the latency
 
 d.patternControl(0)
 BMP = generate_round_spot(x, y, radius);
+BMP1 = XF_prepMultiBMP(BMP');
+
+d.setMode()
+d.definePattern2(0,latency*1000000, 1, 1, 1, 0, latency*1000000, 0, 0, 0)
+% d.definePattern2(1,latency*1000000, 1, 1, 1, 0, 0, 0, 0, 1)
+% set the number of images to be uploaded to one
+d.numOfImages(1, 0)
+% initialize the pattern upload
+d.initPatternLoad(0, size(BMP1,1))
+% do the upload
+d.XF_uploadPattern(BMP1)
+% set the dmd state to play
+d.patternControl(2)
+end
+
+function blink_a_defined_dot_square(d, latency, x, y, side_length)
+% latency in second
+% stop the current pattern and upload the dot. The dot will be blinking
+% every ~ second, where ~ is the latency
+
+d.patternControl(0)
+BMP = generate_square_spot(x, y, side_length);
 BMP1 = XF_prepMultiBMP(BMP');
 
 d.setMode()
@@ -270,6 +311,16 @@ d.XF_uploadPattern(BMP1)
 d.patternControl(2)
 end
 
+
+function I = generate_square_spot(x, y, side_length)
+% Now you don't have to use int col and row!
+I = ones(1920,1080);
+[X,Y] = meshgrid(1:1080,1:1920);
+X = (X-x).^2;
+Y = (Y-y).^2;
+I(X>side_length^2/4) = 0;
+I(Y>side_length^2/4) = 0;
+end
 
 function I = generate_round_spot(x, y, radius)
 % Now you don't have to use int col and row!

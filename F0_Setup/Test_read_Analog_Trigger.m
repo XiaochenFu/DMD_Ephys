@@ -1,6 +1,6 @@
-% We need to read the trigger from the analog input. Data stream every 0.5
-% second will be saved into a buffer. Then we will see whether there's a
-% voltage step. 
+% We need to read the trigger continouly from the analog input. Data stream
+% every bufferTimeSpan second will be saved into a buffer. Then we will see
+% whether there's a voltage step. If yes, something will be printed 
 
 % Analog input 1, (screw 3 and 4. The inout are connected to AO2)
 clc
