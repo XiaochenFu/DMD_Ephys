@@ -12,12 +12,21 @@ A control vi to coordinate DMD and recording. Maybe one pulse for matlab, one fo
 A function can quickly process current ephys recording?
 A .m file that can loop light dots around the recoding site.
 Input: center of the recording site, size of the dot, number of area we want (e.g. 10x10), steps between two dots, current mapping from DMD --> camera, random or not. Save the coordination of the stimuli (with time?)
-Change the size of the light spot, move around
+Change the size of the light spot, move around  T
  
 ** Folder 2 for modulating firing rate **
 One vi change driving current and move around
 One vi for change the duration of the light and number of pulses
 One matlab function that change the fraction of the mirrors --> done
+
+** Folder Test for testing settings 
+*** Trigger_DMD: 
+Upload pattern --> Turn on LED --> Present pattern --> Turn off LED
+Driving current: 10mA
+Optometer: range 1mW, 1V = 30uW
+
+*** Trigger_LED
+Upload and present pattern --> Trigger LED
 
 ** DataBackup
 Temperally save data inside
@@ -43,7 +52,14 @@ This script is designed to present light dot to get the receptive field of the r
 This script is designed to present light dot to get the receptive field  of the recording unit. We first define the center of the ROI. Then, analog input will be analysed continouly. If there's an abruct current increase, one pattern will be uploaded and presented. 
 The light presentation can be random or inorder. The light presentation can be triggered by an external trigger from labview vi.
 The shape of the light spot can be either round or square.
+This can also be used to test the trigger out of DMD
+
+## Folder Test for testing settings
+### ThreePulsePerROI.m
+Based on Loop_Around_ROI.m. Now the 
+
 
 
 ## Note: In the future versions, the parameters will be defined only once. One log file should be generated once we run the scripts.
 
+  
