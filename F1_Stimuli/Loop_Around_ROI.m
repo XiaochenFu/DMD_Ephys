@@ -1,13 +1,15 @@
-% This file is still messy
-
-
 % This script is designed to present light dot to get the receptive field
 % of the recording unit. We first define the center of the ROI. Then,
 % analog input will be analysed continouly. If there's an abruct current
-% increase, one pattern will be uploaded and presented. 
+% increase, one pattern will be uploaded and presented.
+
+% A log file will be created automaticaaly to record the current time and
+% the spot position
 
 % The light presentation will can be triggered by an external trigger from
 % labview vi.
+
+
 
 % Enter the center of the 'receptive field' we want to explore
 ROI_x2 = 659;
@@ -19,21 +21,31 @@ num_step_y = 3; % need to be odd
 step_x2 = 50;
 step_y2 = 50;
 RandomOrNot = 0; % if 1, present the spots randomly
-RoundOrSquare = 'Round';
-% RoundOrSquare = 'Square'; % Not implanted yet.
-DataFileName = 'Jan12Mapping.mat';
+
+DataFileName = 'Jan13Mapping.mat';
 CurrentFolder = pwd;
 idcs = strfind(CurrentFolder,filesep);
 ParentFolder = CurrentFolder(1:idcs(end)-1);
 load([ParentFolder '/F0_Setup/data/' DataFileName])
+
 % Define the light pulse for each ROI
 latency = 0.5; % in seconds
-darkTime = 0.1 % in seconds. The time between two light pulse
+DarkTime = 0.1; % in seconds. The time between two light pulse
 num_pulse = 3; % number of pulses. If 0, the light will keep blinking.
 radius = 50;
 side_length = 50;
+triggerIn = 1;
+RoundOrSquare = 'Round';
+% RoundOrSquare = 'Square';
+MaxTime = 30; % min. stop the listener if the script is running tooooo long
 
-
+%creat log file
+time = clock;
+t = num2str(time)
+t(t=='.')=[]
+t(t==' ')=[]
+TempDataFile = sprintf('Test_%s.mat',t);
+eval(sprintf('diary %s/DataBackup/%s', ParentFolder, t))
 
 % creat a array of coordiantes of the light spots. If random, shuffle the
 % dots. Otherwise, present one by one.
@@ -78,7 +90,7 @@ s = daq.createSession('ni');
 s.Rate = 1000;
 ch1 = addAnalogInputChannel(s,'Dev2', 1, 'Voltage'); % Change the channel name
 % Add a listener, so when data is availiable from the ni device, the data
-% can be processed with a callback function 
+% can be processed with a callback function
 trigConfig.Channel = 1;
 trigConfig.Level = 1;
 trigConfig.Slope = 20;
@@ -86,12 +98,14 @@ bufferTimeSpan = double(s.NotifyWhenDataAvailableExceeds)/s.Rate*3;
 bufferSize =  round(bufferTimeSpan * s.Rate);
 spotConfig.idx = idx;
 spotConfig.latency = latency;
-spotConfig.darkTime = darkTime;
+spotConfig.DarkTime = DarkTime;
+spotConfig.num_pulse = num_pulse;
 spotConfig.spot_position_X2 = spot_position_X2;
 spotConfig.spot_position_Y2 = spot_position_Y2;
 spotConfig.md1 = md1;
 spotConfig.md2 = md2;
 spotConfig.RoundOrSquare = RoundOrSquare;
+spotConfig.triggerIn = triggerIn;
 switch RoundOrSquare
     case 'Round'
         spotConfig.radius = radius;
@@ -100,31 +114,53 @@ switch RoundOrSquare
 end
 
 tic
-while  toc<20 
+
 dataListener = addlistener(s, 'DataAvailable', @(src,event) UploadPatternWhenTriggered(src, event, bufferSize, trigConfig, spotConfig, d));
 % Add a listener for acquisition error events which might occur during background acquisition
 errorListener = addlistener(s, 'ErrorOccurred', @(src,event) disp(getReport(event.Error)));
 % Start continuous background data acquisition
 s.IsContinuous = true;
 startBackground(s);
-while s.IsRunning
-    pause(1);
-end
-delete(dataListener);
-delete(errorListener);
-% Disconnect from hardware
-delete(s)
+
+sss = input('Prese sss to stop','s');
+if sss == 'sss'
+    d.sleep()
+    delete(dataListener);delete(errorListener);delete(s)% Disconnect from hardware
+    % Save the positions in the default folder
+    save([ParentFolder '/DataBackup/' TempDataFile])
+    diary off
+else
+    fprintf('\nPlease stop EventListener and SAVE DATA manually')
+    
+    % Save the positions in the default folder
+    save([ParentFolder '/DataBackup/' TempDataFile])
 end
 
-% Save the positions in the default folder
-time = datestr(now, 'yyyy_mm_dd');
-filename = sprintf('Optimization_%s.mat',time);
-save([ParentFolder '/DataBackup/' DataFileName])
+if  toc> MaxTime*60 % Stop the experiment after 30min
+    d.sleep()
+    delete(dataListener);delete(errorListener);delete(s)% Disconnect from hardware
+    % Save the positions in the default folder
+    save([ParentFolder '/DataBackup/' TempDataFile])
+    diary off
+    error('You are running the script for too long!')
+end
 
+
+
+
+
+% 
+% function StopExp
+% eval('delete(dataListener)');
+% eval('delete(errorListener)');
+% % Disconnect from hardware
+% eval('delete(s)')
+% 
+% end
 
 function UploadPatternWhenTriggered(src, event, bufferSize,trigConfig, spotConfig, d)
-% Here, src is the session object for the listener and event is a 
-% daq.DataAvailableInfo object containing the data and associated timing 
+% Here, src is the session object for the listener and event is a
+% daq.DataAvailableInfo object containing the data and associated timing
 % information.
 
 
@@ -157,14 +193,14 @@ if (numSamplesToDiscard > 0)
 end
 
 
-% Analyze latest acquired data until trigger condition is met. After enough 
-% data is acquired for a complete capture, as specified by the capture 
-% timespan, extract the capture data from the data buffer and save it to a 
+% Analyze latest acquired data until trigger condition is met. After enough
+% data is acquired for a complete capture, as specified by the capture
+% timespan, extract the capture data from the data buffer and save it to a
 % base workspace variable.
 idx = spotConfig.idx;
 md1 = spotConfig.md1;
 md2 = spotConfig.md2;
-if ii>idx 
+if ii>idx
     ii = 1;
     fprintf('\nAll dots are uploaded, please press Ctrl + C to stop!!\n')
     fprintf('\nOr the dots will be looped! \n')
@@ -174,22 +210,17 @@ if ~trigActive
     % State: "Looking for trigger event"
     [trigActive, ~] = trigDetect(prevData, latestData, trigConfig);
 else
-    RoundOrSquare = spotConfig.RoundOrSquare;
+    
     spot_position_X2 = spotConfig.spot_position_X2;
     spot_position_Y2 = spotConfig.spot_position_Y2;
-    latency = spotConfig.latency;
-    darkTime = spotConfig.darkTime;
+    %     
+    #clock
+    #fprintf(num2str(spot_position_X2))
+    #fprintf(num2str(spot_position_X2))
+    
     x1 = predict(md1,[spot_position_X2(ii) spot_position_Y2(ii)]);
     y1 = predict(md2,[spot_position_X2(ii) spot_position_Y2(ii)]);
-    switch RoundOrSquare
-        case 'Round'
-            radius = spotConfig.radius;
-            blink_a_defined_dot_round(d, latency, darkTime, x1, y1, radius);
-        case 'Square'
-            side_length = spotConfig.side_length;
-            blink_a_defined_dot_square(d, latency, darkTime, x1, y1, side_length);
-    end
-    
+    blink_a_defined_dot(d, spotConfig, x1, y1);
     
     ii = ii+1;
     
@@ -200,7 +231,52 @@ end
 
 end
 
+function blink_a_defined_dot(d, spotConfig, x, y)
+% latency in second
+% stop the current pattern and upload the dot. The dot will be blinking
+% every ~ second, where ~ is the latency
 
+d.patternControl(0)
+
+latency = spotConfig.latency;
+darkTime = spotConfig.DarkTime;
+RoundOrSquare = spotConfig.RoundOrSquare;
+num_pulse = spotConfig.num_pulse;
+switch RoundOrSquare
+    case 'Round'
+        radius = spotConfig.radius;
+        BMP = generate_round_spot(x, y, radius);
+    case 'Square'
+        side_length = spotConfig.side_length;
+        BMP = generate_square_spot(x, y, side_length);
+end
+
+BMP1 = XF_prepMultiBMP(BMP');
+
+
+d.setMode()
+idx             = 0;    % pattern index
+exposureTime    = latency*1000000;  % exposure time in �s microsecond?
+clearAfter      = 1;    % clear pattern after exposure
+bitDepth        = 1;    % desired bit depth (1 corresponds to bitdepth of 1)
+leds            = 1;    % select which color to use
+triggerIn       = spotConfig.triggerIn;    % wait for trigger or cuntinue
+darkTime        = darkTime*1000000;    % dark time after exposure in �s
+triggerOut      = 1;    % use trigger2 as output
+patternIdx      = 0;    % image pattern index
+bitPosition     = 0;    % bit position in image pattern
+d.definePattern2(idx,exposureTime, clearAfter, bitDepth, ...
+    leds, triggerIn, darkTime, triggerOut, patternIdx, bitPosition);
+% d.definePattern2(0,latency*1000000, 1, 1, 1, 0, latency*1000000, 0, 0, 0)
+% set the number of images to be uploaded to one
+d.numOfImages(1, num_pulse)
+% initialize the pattern upload
+d.initPatternLoad(0, size(BMP1,1))
+% do the upload
+d.XF_uploadPattern(BMP1)
+% set the dmd state to play
+d.patternControl(2)
+end
 
 function [trigDetected, trigMoment] = trigDetect(prevData, latestData, trigConfig)
 %trigDetect Detect if trigger condition is met in acquired data
@@ -248,72 +324,11 @@ if trigDetected
 end
 end
 
-function blink_a_defined_dot_round(d, latency, darkTime, x, y, radius)
-% latency in second
-% stop the current pattern and upload the dot. The dot will be blinking
-% every ~ second, where ~ is the latency
 
-d.patternControl(0)
-BMP = generate_round_spot(x, y, radius);
-BMP1 = XF_prepMultiBMP(BMP');
-
-d.setMode()
-idx             = 0;    % pattern index
-exposureTime    = latency*1000000;  % exposure time in �s microsecond?
-clearAfter      = 1;    % clear pattern after exposure
-bitDepth        = 1;    % desired bit depth (1 corresponds to bitdepth of 1)
-leds            = 1;    % select which color to use
-triggerIn       = 0;    % wait for trigger or cuntinue
-darkTime        = darkTime*1000000;    % dark time after exposure in �s
-triggerOut      = 1;    % use trigger2 as output
-patternIdx      = 0;    % image pattern index
-bitPosition     = 0;    % bit position in image pattern
-d.definePattern2(idx,exposureTime, clearAfter, bitDepth, ...
-    leds, triggerIn, darkTime, triggerOut, patternIdx, bitPosition);
-% d.definePattern2(0,latency*1000000, 1, 1, 1, 0, latency*1000000, 0, 0, 0)
-% set the number of images to be uploaded to one
-d.numOfImages(1, 0)
-% initialize the pattern upload
-d.initPatternLoad(0, size(BMP1,1))
-% do the upload
-d.XF_uploadPattern(BMP1)
-% set the dmd state to play
-d.patternControl(2)
-end
-
-function blink_a_defined_dot_square(d, latency, darkTime, x, y, side_length)
-% latency in second
-% stop the current pattern and upload the dot. The dot will be blinking
-% every ~ second, where ~ is the latency
-
-d.patternControl(0)
-BMP = generate_square_spot(x, y, side_length);
-BMP1 = XF_prepMultiBMP(BMP');
-
-d.setMode()
-idx             = 0;    % pattern index
-exposureTime    = latency*1000000;  % exposure time in �s microsecond?
-clearAfter      = 1;    % clear pattern after exposure
-bitDepth        = 1;    % desired bit depth (1 corresponds to bitdepth of 1)
-leds            = 1;    % select which color to use
-triggerIn       = 0;    % wait for trigger or cuntinue
-darkTime        = darkTime*1000000;    % dark time after exposure in �s
-triggerOut      = 1;    % use trigger2 as output
-patternIdx      = 0;    % image pattern index
-bitPosition     = 0;    % bit position in image pattern
-d.definePattern2(idx,exposureTime, clearAfter, bitDepth, ...
-    leds, triggerIn, darkTime, triggerOut, patternIdx, bitPosition);
-% set the number of images to be uploaded to one
-d.numOfImages(1, 0)
-% initialize the pattern upload
-d.initPatternLoad(0, size(BMP1,1))
-% do the upload
-d.XF_uploadPattern(BMP1)
-% set the dmd state to play
-d.patternControl(2)
-end
 
 function [x,y] = randomly_blink_a_dot(d, latency, darkTime, x_start, x_end, y_start, y_end, radius)
+% Randomly blink a dot in a defined range
+
 % latency in second
 x = randi([x_start+radius, x_end-radius],1,1);
 y = randi([y_start+radius, y_end-radius],1,1);
