@@ -49,15 +49,33 @@ We need to read the trigger continouly from the analog input. Data stream every 
 ### Loop_Around_ROI_notrigger.m
 This script is designed to present light dot to get the receptive field of the recording unit. Each tiem, a light spot near the ROI will be uploaded, ordered or randomly.
 ### Loop_Around_ROI.m
-This script is designed to present light dot to get the receptive field  of the recording unit. We first define the center of the ROI. Then, analog input will be analysed continouly. If there's an abruct current increase, one pattern will be uploaded and presented. 
+This script is designed to present light dot to get the receptive field  of the recording unit. We first define the center of the ROI. Then, analog input will be analysed continouly. 
+If there's an abruct current increase, one pattern will be uploaded and presented. 
 The light presentation can be random or inorder. The light presentation can be triggered by an external trigger from labview vi.
 The shape of the light spot can be either round or square.
 This can also be used to test the trigger out of DMD
+The trigger can be both analog. Digital part is not tested yet digital 
+### Trigger_and_Record.vi
+Control part:
+This is adapted from Test_AI_AO_v9_Exchange_digital_analog_output.vi. At the beginning of each trial, digital output will be set to high and the matlab will be triggered to upload the pattern to DMD. 
+When upload is finished, LED will be turned on. 
+Then a series of pulses will be sent to DMD. The pulse duration will be defined by Matlabb, but frequency will be defined in labview. 
+After presentation, light will be turned off and the output to matlab will be switched to 0.
+Recording part;
+Trigger in and out to DMD, as well as the measurement from the optometer will be recorded. 
+
 
 ## Folder Test for testing settings
 ### ThreePulsePerROI.m
 Based on Loop_Around_ROI.m. Now the 
 
+
+## Important steps when change the stimuli
+* Run the mapping file to make sure the camera is not moving
+* Check how long it takes to upload the current pattern. Bigger dots takes longer time to load. 
+ref. r = 50 pixel round spots take about 1.6s to 2s to load
+* Run the Labview .vi file only when Matlab .m file say it's ready. 
+ref, 0.9s 
 
 
 ## Note: In the future versions, the parameters will be defined only once. One log file should be generated once we run the scripts.
