@@ -3,14 +3,17 @@
 % analog input will be analysed continouly. If there's an abruct current
 % increase, one pattern will be uploaded and presented.
 
-% A log file will be created automaticaaly to record the current time and
+% A csv file will be created automaticaaly to record the current time and
 % the spot position
+
+% the number of pulses, duration and the dark time of 
+% light pulses will be saved in the .mat file. 
 
 % The light presentation will can be triggered by an external trigger from
 % labview vi.
 
 
-
+%-------------------------------------------------------------------------%
 % Enter the center of the 'receptive field' we want to explore
 ROI_x2 = 659;
 ROI_y2 = 511;
@@ -29,23 +32,34 @@ ParentFolder = CurrentFolder(1:idcs(end)-1);
 load([ParentFolder '/F0_Setup/data/' DataFileName])
 
 % Define the light pulse for each ROI
-latency = 0.5; % in seconds
-DarkTime = 0.1; % in seconds. The time between two light pulse
-num_pulse = 3; % number of pulses. If 0, the light will keep blinking.
+latency = 0.01; % in seconds
+DarkTime = 0.08; % in seconds. The time between trigger and presentation 
+% when the trigger is not working   
+num_pulse = 0; % number of pulses. If 0, the light will keep blinking.
 radius = 50;
 side_length = 50;
 triggerIn = 1;
-RoundOrSquare = 'Round';
 % RoundOrSquare = 'Square';
+RoundOrSquare = 'Round';
 MaxTime = 30; % min. stop the listener if the script is running tooooo long
 
+%-----------------------For Reading Trigger from NI-----------------------%
+Trigger_Type = "Analog";
+% Trigger_Type = "Digital"; % Not implanted yet
+deviceID = 'Dev2';
+measurementType = 'Voltage';
+channelID = 1;
+
+
 %creat log file
-time = clock;
-t = num2str(time)
-t(t=='.')=[]
-t(t==' ')=[]
+t = datestr(datetime);
+% t = num2str(time)
+t(t=='-')=[]
+t(t==' ')='_'
+t(t==':')=[]
 TempDataFile = sprintf('Test_%s.mat',t);
-eval(sprintf('diary %s/DataBackup/%s', ParentFolder, t))
+TempSpotFile = sprintf('%s/DataBackup/Test_%s.csv',ParentFolder,t);
+% eval(sprintf('diary %s/DataBackup/%s', ParentFolder, t))
 
 % creat a array of coordiantes of the light spots. If random, shuffle the
 % dots. Otherwise, present one by one.
@@ -88,7 +102,18 @@ devices = daq.getDevices;
 s = daq.createSession('ni');
 % Set acquisition rate, in scans/second
 s.Rate = 1000;
-ch1 = addAnalogInputChannel(s,'Dev2', 1, 'Voltage'); % Change the channel name
+
+switch Trigger_Type
+    case "Analog"
+        addAnalogInputChannel(s,deviceID, channelID, measurementType);
+    case "Digital"
+        addDigitalChannel(s,deviceID,channelID,measurementType);
+end
+    
+
+
+
+
 % Add a listener, so when data is availiable from the ni device, the data
 % can be processed with a callback function
 trigConfig.Channel = 1;
@@ -115,14 +140,18 @@ end
 
 tic
 
-dataListener = addlistener(s, 'DataAvailable', @(src,event) UploadPatternWhenTriggered(src, event, bufferSize, trigConfig, spotConfig, d));
+dataListener = addlistener(s, 'DataAvailable', @(src,event) UploadPatternAnalogTrigger(src, event, bufferSize, trigConfig, spotConfig, d,TempSpotFile));
 % Add a listener for acquisition error events which might occur during background acquisition
 errorListener = addlistener(s, 'ErrorOccurred', @(src,event) disp(getReport(event.Error)));
 % Start continuous background data acquisition
 s.IsContinuous = true;
 startBackground(s);
+% while s.IsRunning
+%     pause(1);
+% end
 
-sss = input('Prese sss to stop','s');
+fprintf('Ready to run Labview vi')
+sss = input('Prese sss to stop\n','s');
 if sss == 'sss'
     d.sleep()
     delete(dataListener);delete(errorListener);delete(s)% Disconnect from hardware
@@ -147,18 +176,7 @@ end
 
 
 
-
-
-% 
-% function StopExp
-% eval('delete(dataListener)');
-% eval('delete(errorListener)');
-% % Disconnect from hardware
-% eval('delete(s)')
-% 
-% end
-
-function UploadPatternWhenTriggered(src, event, bufferSize,trigConfig, spotConfig, d)
+function UploadPatternAnalogTrigger(src, event, bufferSize,trigConfig, spotConfig, d, TempSpotFile)
 % Here, src is the session object for the listener and event is a
 % daq.DataAvailableInfo object containing the data and associated timing
 % information.
@@ -214,22 +232,114 @@ else
     spot_position_X2 = spotConfig.spot_position_X2;
     spot_position_Y2 = spotConfig.spot_position_Y2;
     %     
-    #clock
-    #fprintf(num2str(spot_position_X2))
-    #fprintf(num2str(spot_position_X2))
+%     #clock
+%     #fprintf(num2str(spot_position_X2))
+%     #fprintf(num2str(spot_position_X2))
     
-    x1 = predict(md1,[spot_position_X2(ii) spot_position_Y2(ii)]);
-    y1 = predict(md2,[spot_position_X2(ii) spot_position_Y2(ii)]);
-    blink_a_defined_dot(d, spotConfig, x1, y1);
-    
+    spot_position_x1 = predict(md1,[spot_position_X2(ii) spot_position_Y2(ii)]);
+    spot_position_y1 = predict(md2,[spot_position_X2(ii) spot_position_Y2(ii)]);
+    blink_a_defined_dot(d, spotConfig, spot_position_x1, spot_position_y1);
+    % Record the current time and the spot position in the csv file
+    time = datestr(clock);
+    stim_t = num2str(time);
+    stim_t(stim_t==':')=[];
+    stim_t = stim_t(end-5:end);
+    Time_CameraXY = [str2num(stim_t) spot_position_X2(ii) spot_position_Y2(ii)];
+    if ii == 1
+        dlmwrite(TempSpotFile,Time_CameraXY,'delimiter',',','precision',6)
+    else
+        dlmwrite(TempSpotFile,Time_CameraXY,'-append','delimiter',',','precision',6)
+    end   
+%     writematrix(Time_CameraXY,TempSpotFile,'WriteMode','append'); % not
+%     yet supported in R2019A....... 
     ii = ii+1;
-    
     % Reset trigger flag, to allow for a new triggered data capture
     trigActive = false;
 end
-
-
 end
+
+function UploadPatternDigitalTrigger(src, event, bufferSize,trigConfig, spotConfig, d, TempSpotFile)
+% Here, src is the session object for the listener and event is a
+% daq.DataAvailableInfo object containing the data and associated timing
+% information.
+
+
+% The incoming data (event.Data and event.TimeStamps) is stored in a
+% persistent buffer (dataBuffer), which is sized to allow triggered data
+% capture.
+
+% Since multiple calls to dataCapture will be needed for a triggered
+% capture, a trigger condition flag (trigActive) and a corresponding
+% data timestamp (trigMoment) are used as persistent variables.
+% Persistent variables retain their values between calls to the function.
+persistent dataBuffer trigActive  ii
+
+% If dataCapture is running for the first time, initialize persistent vars
+if event.TimeStamps(1)==0
+    dataBuffer = [];          % data buffer
+    trigActive = false;       % trigger condition flag
+    prevData = [];            % last data point from previous callback execution
+    ii = 1;
+else
+    prevData = dataBuffer(end, :);
+end
+
+% Store continuous acquisition data in persistent FIFO buffer dataBuffer
+latestData = [event.TimeStamps, event.Data];
+dataBuffer = [dataBuffer; latestData];
+numSamplesToDiscard = size(dataBuffer,1) - bufferSize;
+if (numSamplesToDiscard > 0)
+    dataBuffer(1:numSamplesToDiscard, :) = [];
+end
+
+
+% Analyze latest acquired data until trigger condition is met. After enough
+% data is acquired for a complete capture, as specified by the capture
+% timespan, extract the capture data from the data buffer and save it to a
+% base workspace variable.
+idx = spotConfig.idx;
+md1 = spotConfig.md1;
+md2 = spotConfig.md2;
+if ii>idx
+    ii = 1;
+    fprintf('\nAll dots are uploaded, please press Ctrl + C to stop!!\n')
+    fprintf('\nOr the dots will be looped! \n')
+end
+
+if ~trigActive
+    % State: "Looking for trigger event"
+    [trigActive, ~] = trigDetect(prevData, latestData, trigConfig);
+else
+    
+    spot_position_X2 = spotConfig.spot_position_X2;
+    spot_position_Y2 = spotConfig.spot_position_Y2;
+    %     
+%     #clock
+%     #fprintf(num2str(spot_position_X2))
+%     #fprintf(num2str(spot_position_X2))
+    
+    spot_position_x1 = predict(md1,[spot_position_X2(ii) spot_position_Y2(ii)]);
+    spot_position_y1 = predict(md2,[spot_position_X2(ii) spot_position_Y2(ii)]);
+    blink_a_defined_dot(d, spotConfig, spot_position_x1, spot_position_y1);
+    % Record the current time and the spot position in the csv file
+    time = datestr(clock);
+    stim_t = num2str(time);
+    stim_t(stim_t==':')=[];
+    stim_t = stim_t(end-5:end);
+    Time_CameraXY = [str2num(stim_t) spot_position_X2(ii) spot_position_Y2(ii)];
+    if ii == 1
+        dlmwrite(TempSpotFile,Time_CameraXY,'delimiter',',','precision',6)
+    else
+        dlmwrite(TempSpotFile,Time_CameraXY,'-append','delimiter',',','precision',6)
+    end   
+%     writematrix(Time_CameraXY,TempSpotFile,'WriteMode','append'); % not
+%     yet supported in R2019A....... 
+    ii = ii+1;
+    % Reset trigger flag, to allow for a new triggered data capture
+    trigActive = false;
+end
+end
+
 
 function blink_a_defined_dot(d, spotConfig, x, y)
 % latency in second
