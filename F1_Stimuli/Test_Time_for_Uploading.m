@@ -15,17 +15,17 @@ step_x2 = 50;
 step_y2 = 50;
 RandomOrNot = 0; % if 1, present the spots randomly
 
-DataFileName = 'Jan13Mapping.mat';
+DataFileName = 'Feb03Mapping.mat';
 CurrentFolder = pwd;
 idcs = strfind(CurrentFolder,filesep);
-ParentFolder = CurrentFolder(1:idcs(end)-1);
+ParentFolder = CurrentFolder(1:idcs(end)-1);    
 load([ParentFolder '/F0_Setup/data/' DataFileName])
 
 % Define the light pulse for each ROI
 latency = 0.5; % in seconds
 DarkTime = 0.3; % in seconds. The time between two light pulse
 num_pulse = 0; % number of pulses. If 0, the light will keep blinking.
-radius = 50;
+radius = 400;
 side_length = 50;
 triggerIn = 1;
 RoundOrSquare = 'Round';
@@ -205,10 +205,6 @@ else
     
     spot_position_X2 = spotConfig.spot_position_X2;
     spot_position_Y2 = spotConfig.spot_position_Y2;
-    %     
-%     #clock
-%     #fprintf(num2str(spot_position_X2))
-%     #fprintf(num2str(spot_position_X2))
     
     spot_position_x1 = predict(md1,[spot_position_X2(ii) spot_position_Y2(ii)]);
     spot_position_y1 = predict(md2,[spot_position_X2(ii) spot_position_Y2(ii)]);
@@ -260,8 +256,8 @@ switch RoundOrSquare
         BMP = generate_square_spot(x, y, side_length);
 end
 
-BMP1 = XF_prepMultiBMP(BMP');
-
+% BMP1 = XF_prepMultiBMP(BMP');
+BMP1 = prepBMP(BMP');
 
 d.setMode()
 idx             = 0;    % pattern index
@@ -346,8 +342,8 @@ y = randi([y_start+radius, y_end-radius],1,1);
 pause(0.1)
 d.patternControl(0)
 BMP = generate_round_spot(x, y, radius);
-BMP1 = XF_prepMultiBMP(BMP');
-
+% BMP1 = XF_prepMultiBMP(BMP');
+BMP1 = prepBMP(BMP');
 d.setMode()
 idx             = 0;    % pattern index
 exposureTime    = latency*1000000;  % exposure time in �s microsecond?

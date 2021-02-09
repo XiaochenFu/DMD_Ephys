@@ -2,7 +2,7 @@
 % the script and input the postion under the camera you want, a light spot
 % will be blinking there.
 
-DataFileName = 'Jan13Mapping.mat';
+DataFileName = 'Feb10Mapping.mat';
 num_loop = 1;
 num_loop_max = 100; % At most 100 dots can be tested. 
 latency = 1;
@@ -71,8 +71,8 @@ function blink_a_defined_dot(d, latency, x, y, radius)
 
 d.patternControl(0)
 BMP = generate_round_spot(x, y, radius);
-BMP1 = XF_prepMultiBMP(BMP');
-
+% BMP1 = XF_prepMultiBMP(BMP');
+BMP1 = prepBMP(BMP');
 d.setMode()
 d.definePattern2(0,latency*1000000, 1, 1, 1, 0, latency*1000000, 0, 0, 0)
 % d.definePattern2(1,latency*1000000, 1, 1, 1, 0, 0, 0, 0, 1)

@@ -80,4 +80,18 @@ ref, 0.9s
 
 ## Note: In the future versions, the parameters will be defined only once. One log file should be generated once we run the scripts.
 
-  
+### Settting for optometer
+*Basic settings* 
+Max power 50mW
+Max intensity 20W/cm^2 = 200mW/mm^2
+Wavelength Correction: CH1 OUT not wavelength corrected.
+Analog bandwidth setting: try hogh and low?
+voltage is range de- pendent within the interval from -10V to +10V
+For pulse signal Photodiode sensor: It can follow short pulses in the ns range. It is important that the pulse
+peak power is within the maximum power range of the sensor. It is also important that the
+power range is set that accordingly the peak power is within this range, otherwise the reading
+will clip at the range end and lead to a wrong average value. Further it is important to use a
+power range in manual mode that can measure the peak value, therefore the Min-Max function is very helpful. Depending on the pulse length and repetition rate the bandwidth setting
+will influence the power reading. It is recommended to use the low bandwidth setting for a
+stable display; when the pulse should be monitored via the analog output, the bandwidth
+should be set to ‘HI’. (Mannual page 55)

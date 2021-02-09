@@ -14,10 +14,10 @@
 
 clear
 %-------------------------Define the light spot---------------------------%
-DataFileName = 'Feb02Mapping.mat';
+DataFileName = 'Feb03Mapping.mat';
 % Enter the center of the 'receptive field' we want to explore
-ROI_x2 = 628;
-ROI_y2 = 462;
+ROI_x2 = 624;
+ROI_y2 = 365;
 % The number of light dots will be num_step_x*num_step_y
 num_step_x = 3; % need to be odd
 num_step_y = 3; % need to be odd
@@ -26,15 +26,15 @@ step_x2 = 30;
 step_y2 = 30;
 RandomOrNot = 1; % if 1, present the spots randomly
 % Define the light pulse for each ROI
-latency = 0.08; % in seconds
+latency = 0.02; % in seconds
 DarkTime = 0.00; % in seconds. The time between trigger and presentation 
 % when the trigger is not working   
 num_pulse = 0; % number of pulses. If 0, the light will keep blinking.
-radius = 50;
-side_length = 50;
 triggerIn = 1;
-% RoundOrSquare = 'Square';
-RoundOrSquare = 'Round';
+RoundOrSquare = 'Square';
+side_length = 100;
+% RoundOrSquare = 'Round';
+% radius = 400;
 MaxTime = 30; % min. stop the listener if the script is running tooooo long
 
 %-----------------------For Reading Trigger from NI-----------------------%
@@ -231,10 +231,6 @@ else
     
     spot_position_X2 = spotConfig.spot_position_X2;
     spot_position_Y2 = spotConfig.spot_position_Y2;
-    %     
-%     #clock
-%     #fprintf(num2str(spot_position_X2))
-%     #fprintf(num2str(spot_position_X2))
     
     spot_position_x1 = predict(md1,[spot_position_X2(ii) spot_position_Y2(ii)]);
     spot_position_y1 = predict(md2,[spot_position_X2(ii) spot_position_Y2(ii)]);
@@ -361,8 +357,8 @@ switch RoundOrSquare
         BMP = generate_square_spot(x, y, side_length);
 end
 
-BMP1 = XF_prepMultiBMP(BMP');
-
+% BMP1 = XF_prepMultiBMP(BMP');
+BMP1 = prepBMP(BMP');
 
 d.setMode()
 idx             = 0;    % pattern index
@@ -447,7 +443,8 @@ y = randi([y_start+radius, y_end-radius],1,1);
 pause(0.1)
 d.patternControl(0)
 BMP = generate_round_spot(x, y, radius);
-BMP1 = XF_prepMultiBMP(BMP');
+% BMP1 = XF_prepMultiBMP(BMP');
+BMP1 = prepBMP(BMP');
 
 d.setMode()
 idx             = 0;    % pattern index

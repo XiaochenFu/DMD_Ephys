@@ -11,7 +11,7 @@ x_end = 1080;
 y_start = 1;
 y_end = 1920;
 radius = 50;
-DataFileName = 'Jan13Mapping.mat';
+DataFileName = 'Feb10Mapping.mat';
 %%=======================================================================%%
 
 
@@ -77,8 +77,8 @@ y = randi([y_start+radius, y_end-radius],1,1);
 % every ~ second, where ~ is the latency
 d.patternControl(0)
 BMP = generate_round_spot(x, y, radius);
-BMP1 = XF_prepMultiBMP(BMP');
-
+% BMP1 = XF_prepMultiBMP(BMP');
+BMP1 = prepBMP(BMP');
 d.setMode()
 d.definePattern2(0,latency*1000000, 1, 1, 1, 0, latency*1000000, 0, 0, 0)
 % d.definePattern2(1,latency*1000000, 1, 1, 1, 0, 0, 0, 0, 1)
