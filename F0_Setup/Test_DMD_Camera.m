@@ -2,32 +2,32 @@
 % the script and input the postion under the camera you want, a light spot
 % will be blinking there.
 
-DataFileName = 'Feb10Mapping.mat';
+DataFileName = 'Apr21Mapping.mat';
 num_loop = 1;
 num_loop_max = 100; % At most 100 dots can be tested. 
 latency = 1;
 radius = 50;
 
 load([pwd '/data/' DataFileName])
-X1 = [];
-Y1 = [];
-X2 = [];
-Y2 = [];
+X_DMD = [];
+Y_DMD = [];
+X_Camera = [];
+Y_Camera = [];
 % initialize DMD
 clear d
 d = DMD('debug', 1);
 while num_loop < num_loop_max
     % Ask to input the coordinate of the roi
     prompt = 'Enter the x coordinated of the centre of dot\n';
-    x2 = input(prompt);
+    xc = input(prompt);
     prompt = 'Enter the y coordinated of the centre of dot\n';
-    y2 = input(prompt);
+    yc = input(prompt);
     % Predict the position using fitted model
-    x1 = predict(md1,[x2 y2]);
-    y1 = predict(md2,[x2 y2]);
-    if x1>0 && x1<1080
-        if y1>0 && y1<1080
-            blink_a_defined_dot(d, latency, round(x1), round(y1), radius)
+    xd = predict(md1,[xc yc]);
+    yd = predict(md2,[xc yc]);
+    if xd>0 && xd<1080
+        if yd>0 && yd<1920
+            blink_a_defined_dot(d, latency, round(xd), round(yd), radius)
         else
             error('Dot is out of DMD')
         end
@@ -42,10 +42,10 @@ while num_loop < num_loop_max
     if str == 'n'
         break
     else
-        X1 = [X1;x1];
-        X2 = [X2;x2];
-        Y1 = [Y1;y1];
-        Y2 = [Y2;y2];
+        X_DMD = [X_DMD;xd];
+        X_Camera = [X_Camera;xc];
+        Y_DMD = [Y_DMD;yd];
+        Y_Camera = [Y_Camera;yc];
     end
     num_loop = num_loop + 1;
 end
@@ -57,7 +57,7 @@ str = input(prompt,'s');
 if isempty(str)
     fprintf('Data not saved')
 else
-    save([pwd '/data/' DataFileName],'X1', 'Y1', 'X2', 'Y2', 'md1', 'md2', 'md3', 'md4')
+    save([pwd '/data/' DataFileName],'X_DMD', 'Y_DMD', 'X_Camera', 'Y_Camera', 'md1', 'md2', 'md3', 'md4')
 end
 
 

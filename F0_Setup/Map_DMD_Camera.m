@@ -11,20 +11,20 @@ x_end = 1080;
 y_start = 1;
 y_end = 1920;
 radius = 50;
-DataFileName = 'Feb10Mapping.mat';
+DataFileName = 'Apr21Mapping.mat';
 %%=======================================================================%%
 
 
-X1 = [];
-Y1 = [];
-X2 = [];
-Y2 = [];
+X_DMD = [];
+Y_DMD = [];
+X_Camera = [];
+Y_Camera = [];
 % initialize DMD
 clear d
 d = DMD('debug', 1);
 while num_loop < num_loop_max
     % randomly blink a dot
-    [x1,y1] = randomly_blink_a_dot(d, latency, x_start, x_end, y_start, y_end, radius);
+    [xd,yd] = randomly_blink_a_dot(d, latency, x_start, x_end, y_start, y_end, radius);
     % If the dot can be seen, record the position at DMD and coordinate in
     % the camera. Otherwise, turn to another dot.
     prompt = 'Can you see the dot?\n y/n [y] \nEnter "s" to s\n';
@@ -36,38 +36,39 @@ while num_loop < num_loop_max
         
         % Then ask the coordinate of the dot
         prompt = 'Enter the x coordinated of the centre of dot\n';
-        x2 = input(prompt);
+        xc = input(prompt);
         prompt = 'Enter the y coordinated of the centre of dot\n';
-        y2 = input(prompt);  
-        if y2 == []
+        yc = input(prompt);  
+        if isempty(yc)
             continue
         else
-            X1 = [X1;x1];
-            X2 = [X2;x2];
-            Y1 = [Y1;y1];
-            Y2 = [Y2;y2];
+            X_DMD = [X_DMD;xd];
+            X_Camera = [X_Camera;xc];
+            Y_DMD = [Y_DMD;yd];
+            Y_Camera = [Y_Camera;yc];
         end
         
     end
     num_loop = num_loop + 1;
 end
 % sleep(d)
+
 % Use linear regression to find the mapping. Suppose the center of the dot
-% on DMD is (x1, y1), and the coresponding coordinate in camera is (x2,
-% y2). Then we have
-% x2 = c1 + a1*x1 + b1*y1
-% y2 = c1 + a2*x1 + b2*y1
+% on DMD is (xd, yd), and the coresponding coordinate in camera is (xc,
+% yc). Then we have
+% xc = c1 + a1*xd + b1*yd
+% yc = c1 + a2*xd + b2*yd
 % a1, a2, b1, b2, c1, c2 will be saved as Coef1
 % And
-% x1 = w1 + u1*x2 + v1*y2
-% y1 = w2 + u2*x2 + v2*y2
+% xd = w1 + u1*xc + v1*yc
+% yd = w2 + u2*xc + v2*yc
 % u1, u2, v1, v2, w1, w2 will be saved as Coef2
-md1 = fitlm([X2,Y2], X1)
-md2 = fitlm([X2,Y2], Y1)
-md3 = fitlm([X1,Y1], X2)
-md4 = fitlm([X1,Y1], Y2)
-% save Jan05Mapping.mat X1 X2 Y1 Y2 md1 md2 md3 md4 
-save([pwd '/data/' DataFileName],'X1', 'Y1', 'X2', 'Y2', 'md1', 'md2', 'md3', 'md4')
+md1 = fitlm([X_Camera,Y_Camera], X_DMD)
+md2 = fitlm([X_Camera,Y_Camera], Y_DMD)
+md3 = fitlm([X_DMD,Y_DMD], X_Camera)
+md4 = fitlm([X_DMD,Y_DMD], Y_Camera)
+% save Jan05Mapping.mat X_DMD X_Camera Y_DMD Y_Camera md1 md2 md3 md4 
+save([pwd '/data/' DataFileName],'X_DMD', 'Y_DMD', 'X_Camera', 'Y_Camera', 'md1', 'md2', 'md3', 'md4')
 
 function [x,y] = randomly_blink_a_dot(d, latency, x_start, x_end, y_start, y_end, radius)
 % latency in second
@@ -94,7 +95,6 @@ end
 
 
 function I = generate_round_spot(x, y, radius)
-% Now you don't have to use int col and row!
 I = ones(1920,1080);
 [X,Y] = meshgrid(1:1080,1:1920);
 X = (X-x).^2;
