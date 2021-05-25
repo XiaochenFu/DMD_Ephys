@@ -14,10 +14,10 @@
 
 clear
 %-------------------------Define the light spot---------------------------%
-DataFileName = 'Feb03Mapping.mat';
+DataFileName = 'Apr28Mapping.mat';
 % Enter the center of the 'receptive field' we want to explore
-ROI_x2 = 624;
-ROI_y2 = 365;
+ROI_x2 = 950;
+ROI_y2 = 250;
 % The number of light dots will be num_step_x*num_step_y
 num_step_x = 3; % need to be odd
 num_step_y = 3; % need to be odd
@@ -26,7 +26,7 @@ step_x2 = 30;
 step_y2 = 30;
 RandomOrNot = 1; % if 1, present the spots randomly
 % Define the light pulse for each ROI
-latency = 0.02; % in seconds
+latency = 0.08; % in seconds
 DarkTime = 0.00; % in seconds. The time between trigger and presentation 
 % when the trigger is not working   
 num_pulse = 0; % number of pulses. If 0, the light will keep blinking.
@@ -241,7 +241,7 @@ else
     stim_t(stim_t==':')=[];
     stim_t = stim_t(end-5:end);
     Time_CameraXY = [str2num(stim_t) spot_position_X2(ii) spot_position_Y2(ii)];
-    if ii == 1
+    if isfile(ResultSaving)
         dlmwrite(TempSpotFile,Time_CameraXY,'delimiter',',','precision',6)
     else
         dlmwrite(TempSpotFile,Time_CameraXY,'-append','delimiter',',','precision',6)
