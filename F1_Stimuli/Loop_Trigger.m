@@ -32,10 +32,10 @@
 clear
 %-------------------Temporal profile of light spot------------------------%
 % Define the light pulse for each ROI
-latency = 0.08; % in seconds
+latency = 0.24; % in seconds
 DarkTime = 0.00; % in seconds. The time between trigger and presentation
 % when the trigger is not working
-num_pulse = 0; % number of pulses. If 0, the light will keep blinking.
+num_pulse = 1; % number of pulses. If 0, the light will keep blinking.
 triggerIn = 1;
 %% -----------------Define the light spot --------------------- %%
 % % -----------------Define the light spot from camera--------------------- %
@@ -55,19 +55,26 @@ triggerIn = 1;
 % MaxTime = 30; % min. stop the listener if the script is running tooooo long
 
 % -----------------Define the light spot from DMD--------------------- % 
-x_start = 5;
-x_end = 8;
-num_step_x = 4;
+% x_start = 9;
+% x_end = 18;
+% num_step_x = 10;
+% 
+% y_start = 15;
+% y_end = 23;
+% num_step_y = 9;
+x_start = 9;
+x_end = 10;
+num_step_x = 2;
 
-y_start = 7;
-y_end = 10;
-num_step_y = 4;
+y_start = 15;
+y_end = 16;
+num_step_y = 2;
+grid_size = 60;
 
 RandomOrNot = 0; % if 1, present the spots randomly
 SpotGenFun = 'generate_grid_Ver2';
 spot_position_X_DMD = [];
 spot_position_Y_DMD = [];
-grid_size = 120;
 MaxTime = 30; % min. stop the listener if the script is running tooooo long
 
 %-----------------Define the light spot from testpattern------------------%
@@ -312,7 +319,7 @@ idx = spotConfig.idx;
 SpotGenFun = spotConfig.SpotGenFun;
 if ii>idx
     ii = 1;
-    fprintf('\nAll dots are uploaded, please press Ctrl + C to stop!!\n')
+    fprintf('\nAll dots are uploaded, please press sss to stop!!\n')
     fprintf('\nOr the dots will be looped! \n')
 end
 
@@ -356,26 +363,26 @@ else
     switch SpotGenFun
         case 'generate_round_spot'
             Time_CameraXY = [str2num(stim_t) spot_position_X_Camera(ii) spot_position_Y_Camera(ii)];
-            if ii == 1
-                dlmwrite(ResultSaving,Time_CameraXY,'delimiter',',','precision',6)
-            else
+            if isfile(ResultSaving)
                 dlmwrite(ResultSaving,Time_CameraXY,'-append','delimiter',',','precision',6)
+            else
+                dlmwrite(ResultSaving,Time_CameraXY,'delimiter',',','precision',6)
             end
         case 'generate_square_spot'
             Time_CameraXY = [str2num(stim_t) spot_position_X_Camera(ii) spot_position_Y_Camera(ii)];
-            if ii == 1
-                dlmwrite(ResultSaving,Time_CameraXY,'delimiter',',','precision',6)
-            else
+            if isfile(ResultSaving)
                 dlmwrite(ResultSaving,Time_CameraXY,'-append','delimiter',',','precision',6)
+            else
+                dlmwrite(ResultSaving,Time_CameraXY,'delimiter',',','precision',6)
             end
         case 'testPattern'
             error('Not implanted yet')
         case 'generate_grid_Ver2'
-            Time_DMD_XY = [str2num(stim_t) spot_position_X_DMD spot_position_Y_DMD];
-            if ii == 1
-                dlmwrite(ResultSaving,Time_DMD_XY,'delimiter',',','precision',6)
-            else
+            Time_DMD_XY = [str2num(stim_t) spot_position_X_DMD spot_position_Y_DMD]
+            if isfile(ResultSaving)
                 dlmwrite(ResultSaving,Time_DMD_XY,'-append','delimiter',',','precision',6)
+            else
+                dlmwrite(ResultSaving,Time_DMD_XY,'delimiter',',','precision',6)
             end
     end
 
